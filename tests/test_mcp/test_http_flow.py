@@ -9,11 +9,11 @@ import pytest
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
-import openharness.mcp.client as client_module
-from openharness.mcp.client import McpClientManager
-from openharness.mcp.types import McpHttpServerConfig
-from openharness.tools import create_default_tool_registry
-from openharness.tools.base import ToolExecutionContext
+import agentschool.mcp.client as client_module
+from agentschool.mcp.client import McpClientManager
+from agentschool.mcp.types import McpHttpServerConfig
+from agentschool.tools import create_default_tool_registry
+from agentschool.tools.base import ToolExecutionContext
 
 
 @pytest.mark.asyncio

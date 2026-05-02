@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from openharness.swarm.spawn_utils import (
+from agentschool.swarm.spawn_utils import (
     TEAMMATE_COMMAND_ENV_VAR,
     build_inherited_cli_flags,
     build_inherited_env_vars,
@@ -43,7 +43,7 @@ def test_build_inherited_cli_flags_explicit_model_included():
 
 def test_build_inherited_cli_flags_inherit_model_excluded():
     """model='inherit' must NOT produce a --model flag so the subprocess
-    picks up the parent's model from the OPENHARNESS_MODEL env var."""
+    picks up the parent's model from the AGENTSCHOOL_MODEL env var."""
     flags = build_inherited_cli_flags(model="inherit")
     assert "--model" not in flags
 

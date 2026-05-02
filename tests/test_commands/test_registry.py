@@ -7,19 +7,18 @@ from pathlib import Path
 
 import pytest
 
-import openharness.commands.registry as registry_module
-from openharness.commands.registry import CommandContext, create_default_command_registry
-from openharness.autopilot import RepoVerificationStep
-from openharness.config.paths import get_feedback_log_path, get_project_issue_file, get_project_pr_comments_file
-from openharness.config.settings import load_settings, save_settings, Settings
-from openharness.engine.messages import ConversationMessage, TextBlock
-from openharness.engine.query_engine import QueryEngine
-from openharness.mcp.types import McpHttpServerConfig, McpStdioServerConfig
-from openharness.permissions import PermissionChecker
-from openharness.plugins.types import PluginCommandDefinition
-from openharness.state import AppState, AppStateStore
-from openharness.tasks import get_task_manager
-from openharness.tools import create_default_tool_registry
+import agentschool.commands.registry as registry_module
+from agentschool.commands.registry import CommandContext, create_default_command_registry
+from agentschool.config.paths import get_feedback_log_path, get_project_issue_file, get_project_pr_comments_file
+from agentschool.config.settings import load_settings, save_settings, Settings
+from agentschool.engine.messages import ConversationMessage, TextBlock
+from agentschool.engine.query_engine import QueryEngine
+from agentschool.mcp.types import McpHttpServerConfig, McpStdioServerConfig
+from agentschool.permissions import PermissionChecker
+from agentschool.plugins.types import PluginCommandDefinition
+from agentschool.state import AppState, AppStateStore
+from agentschool.tasks import get_task_manager
+from agentschool.tools import create_default_tool_registry
 
 
 class FakeApiClient:
@@ -65,7 +64,7 @@ def _make_context(tmp_path: Path) -> CommandContext:
 
 @pytest.mark.asyncio
 async def test_permissions_command_persists(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, args = registry.lookup("/permissions set full_auto")
     assert command is not None
@@ -78,7 +77,7 @@ async def test_permissions_command_persists(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_permissions_command_is_marked_local_only(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, _ = registry.lookup("/permissions set full_auto")
     assert command is not None
@@ -87,7 +86,7 @@ async def test_permissions_command_is_marked_local_only(tmp_path: Path, monkeypa
 
 @pytest.mark.asyncio
 async def test_permissions_command_supports_explicit_remote_admin_opt_in(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, _ = registry.lookup("/permissions set full_auto")
     assert command is not None
@@ -96,7 +95,7 @@ async def test_permissions_command_supports_explicit_remote_admin_opt_in(tmp_pat
 
 @pytest.mark.asyncio
 async def test_plugin_command_is_marked_local_only(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, _ = registry.lookup("/plugin list")
     assert command is not None
@@ -105,7 +104,7 @@ async def test_plugin_command_is_marked_local_only(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_plugin_command_supports_explicit_remote_admin_opt_in(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, _ = registry.lookup("/plugin list")
     assert command is not None
@@ -114,7 +113,7 @@ async def test_plugin_command_supports_explicit_remote_admin_opt_in(tmp_path: Pa
 
 @pytest.mark.asyncio
 async def test_reload_plugins_command_is_marked_local_only(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, _ = registry.lookup("/reload-plugins")
     assert command is not None
@@ -123,7 +122,7 @@ async def test_reload_plugins_command_is_marked_local_only(tmp_path: Path, monke
 
 @pytest.mark.asyncio
 async def test_reload_plugins_command_supports_explicit_remote_admin_opt_in(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, _ = registry.lookup("/reload-plugins")
     assert command is not None
@@ -132,7 +131,7 @@ async def test_reload_plugins_command_supports_explicit_remote_admin_opt_in(tmp_
 
 @pytest.mark.asyncio
 async def test_bridge_command_is_marked_local_only(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, _ = registry.lookup("/bridge spawn id")
     assert command is not None
@@ -141,7 +140,7 @@ async def test_bridge_command_is_marked_local_only(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_bridge_command_supports_explicit_remote_admin_opt_in(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, _ = registry.lookup("/bridge spawn id")
     assert command is not None
@@ -150,8 +149,8 @@ async def test_bridge_command_supports_explicit_remote_admin_opt_in(tmp_path: Pa
 
 @pytest.mark.asyncio
 async def test_memory_show_rejects_path_traversal(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
     command, args = registry.lookup("/memory show ../../../../../../etc/hosts")
     assert command is not None
@@ -163,8 +162,8 @@ async def test_memory_show_rejects_path_traversal(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_memory_show_reads_normal_entries_with_md_fallback(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
 
     add_command, add_args = registry.lookup("/memory add Notes :: hello world")
@@ -179,7 +178,7 @@ async def test_memory_show_reads_normal_entries_with_md_fallback(tmp_path: Path,
 
 @pytest.mark.asyncio
 async def test_model_command_persists(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, args = registry.lookup("/model opus")
     assert command is not None
@@ -193,7 +192,7 @@ async def test_model_command_persists(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_model_command_accepts_direct_value(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, args = registry.lookup("/model gpt-5.4")
     assert command is not None
@@ -206,7 +205,7 @@ async def test_model_command_accepts_direct_value(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_model_command_default_clears_profile_override(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     save_settings(
         Settings().model_copy(
             update={
@@ -236,8 +235,26 @@ async def test_model_command_default_clears_profile_override(tmp_path: Path, mon
 
 
 @pytest.mark.asyncio
+async def test_learn_command_submits_agentic_learning_prompt(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    registry = create_default_command_registry()
+    context = _make_context(tmp_path)
+
+    command, args = registry.lookup("/learn debug Playwright flaky tests")
+    assert command is not None
+
+    result = await command.handler(args, context)
+
+    assert result.message is not None
+    assert "Starting learning run in" in result.message
+    assert result.learning_workspace is not None
+    assert "debug Playwright flaky tests" in result.learning_workspace.prompt
+    assert str(tmp_path / ".agentschool" / "learn" / "topics" / "debug-playwright-flaky-tests" / "skill" / "SKILL.md") in result.learning_workspace.prompt
+
+
+@pytest.mark.asyncio
 async def test_turns_show_reports_unlimited_engine_when_session_is_unbounded(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
     context.engine.set_max_turns(None)
@@ -252,7 +269,7 @@ async def test_turns_show_reports_unlimited_engine_when_session_is_unbounded(tmp
 
 @pytest.mark.asyncio
 async def test_turns_command_accepts_unlimited(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
 
@@ -267,7 +284,7 @@ async def test_turns_command_accepts_unlimited(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_provider_command_switches_profile_and_requests_runtime_refresh(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     save_settings(
         Settings().model_copy(
             update={
@@ -302,84 +319,8 @@ async def test_provider_command_switches_profile_and_requests_runtime_refresh(tm
 
 
 @pytest.mark.asyncio
-async def test_autopilot_command_add_list_and_complete(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    registry = create_default_command_registry()
-    context = _make_context(tmp_path)
-
-    add_command, add_args = registry.lookup("/autopilot add idea Build unified queue :: intake from issues and prs")
-    assert add_command is not None
-    add_result = await add_command.handler(add_args, context)
-    assert "Queued autopilot card" in add_result.message
-
-    list_command, list_args = registry.lookup("/autopilot list")
-    assert list_command is not None
-    list_result = await list_command.handler(list_args, context)
-    assert "Build unified queue" in list_result.message
-
-    next_command, next_args = registry.lookup("/autopilot next")
-    next_result = await next_command.handler(next_args, context)
-    assert "Build unified queue" in next_result.message
-    card_id = next_result.message.split()[0]
-
-    complete_command, complete_args = registry.lookup(f"/autopilot complete {card_id} implemented")
-    complete_result = await complete_command.handler(complete_args, context)
-    assert "-> completed" in complete_result.message
-
-    status_command, status_args = registry.lookup("/autopilot status")
-    status_result = await status_command.handler(status_args, context)
-    assert "- completed: 1" in status_result.message
-
-
-@pytest.mark.asyncio
-async def test_autopilot_command_export_dashboard(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    registry = create_default_command_registry()
-    context = _make_context(tmp_path)
-
-    command, args = registry.lookup("/autopilot export-dashboard")
-    assert command is not None
-    result = await command.handler(args, context)
-
-    assert "Exported autopilot dashboard:" in result.message
-    output_dir = Path(result.message.split(": ", 1)[1])
-    assert (output_dir / "index.html").exists()
-    assert (output_dir / "snapshot.json").exists()
-
-
-@pytest.mark.asyncio
-async def test_ship_command_queues_and_executes_card(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    registry = create_default_command_registry()
-    context = _make_context(tmp_path)
-
-    async def fake_run_agent_prompt(self, prompt: str, *, model, max_turns, permission_mode, cwd=None):
-        return "Implemented the requested feature."
-
-    def fake_run_verification_steps(self, policies, *, cwd=None):
-        return [RepoVerificationStep(command="uv run pytest -q", returncode=0, status="success")]
-
-    monkeypatch.setattr(
-        "openharness.autopilot.service.RepoAutopilotStore._run_agent_prompt",
-        fake_run_agent_prompt,
-    )
-    monkeypatch.setattr(
-        "openharness.autopilot.service.RepoAutopilotStore._run_verification_steps",
-        fake_run_verification_steps,
-    )
-
-    command, args = registry.lookup("/ship Build autopilot tick :: end-to-end automation")
-    assert command is not None
-    result = await command.handler(args, context)
-
-    assert "-> completed" in result.message
-    assert "run report:" in result.message
-    assert "verification report:" in result.message
-
-
-@pytest.mark.asyncio
 async def test_plugin_command_registers_and_submits_prompt(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry(
         plugin_commands=[
             PluginCommandDefinition(
@@ -400,7 +341,7 @@ async def test_plugin_command_registers_and_submits_prompt(tmp_path: Path, monke
 
 @pytest.mark.asyncio
 async def test_model_command_rejects_values_outside_profile_allowlist(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     save_settings(
         Settings().model_copy(
             update={
@@ -431,7 +372,7 @@ async def test_model_command_rejects_values_outside_profile_allowlist(tmp_path: 
 
 @pytest.mark.asyncio
 async def test_doctor_command_reports_context(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     command, args = registry.lookup("/doctor")
     assert command is not None
@@ -452,8 +393,8 @@ async def test_doctor_command_reports_context(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_memory_command_manages_entries(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
 
@@ -476,7 +417,7 @@ async def test_memory_command_manages_entries(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_compact_summary_and_usage_commands(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
     context.engine.load_messages(
@@ -508,7 +449,7 @@ async def test_compact_summary_and_usage_commands(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_ui_mode_commands_persist_and_update_state(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
 
@@ -530,10 +471,6 @@ async def test_ui_mode_commands_persist_and_update_state(tmp_path: Path, monkeyp
     vim_result = await vim_command.handler(vim_args, context)
     assert "enabled" in vim_result.message
     assert context.app_state.get().vim_enabled is True
-
-    voice_command, voice_args = registry.lookup("/voice keyterms Shipping pytest fixtures")
-    voice_result = await voice_command.handler(voice_args, context)
-    assert "pytest" in voice_result.message
 
     plan_command, plan_args = registry.lookup("/plan on")
     plan_result = await plan_command.handler(plan_args, context)
@@ -561,18 +498,18 @@ async def test_ui_mode_commands_persist_and_update_state(tmp_path: Path, monkeyp
 
 @pytest.mark.asyncio
 async def test_version_context_and_share_commands(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
 
     version_command, version_args = registry.lookup("/version")
     version_result = await version_command.handler(version_args, context)
-    assert "OpenHarness" in version_result.message
+    assert "AgentSchool" in version_result.message
 
     context_command, context_args = registry.lookup("/context")
     context_result = await context_command.handler(context_args, context)
-    assert "OpenHarness" in context_result.message or "interactive agent" in context_result.message
+    assert "AgentSchool" in context_result.message or "interactive agent" in context_result.message
 
     share_command, share_args = registry.lookup("/share")
     share_result = await share_command.handler(share_args, context)
@@ -581,8 +518,8 @@ async def test_version_context_and_share_commands(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_auth_feedback_and_project_context_commands(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
 
@@ -614,8 +551,8 @@ async def test_auth_feedback_and_project_context_commands(tmp_path: Path, monkey
 
 @pytest.mark.asyncio
 async def test_agents_session_files_and_reload_plugins_commands(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
     (tmp_path / "src").mkdir()
@@ -675,8 +612,8 @@ async def test_agents_session_files_and_reload_plugins_commands(tmp_path: Path, 
 
 @pytest.mark.asyncio
 async def test_agents_help_and_subagents_alias(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
 
@@ -699,8 +636,8 @@ async def test_agents_help_and_subagents_alias(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_init_and_bridge_commands(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
 
@@ -708,7 +645,7 @@ async def test_init_and_bridge_commands(tmp_path: Path, monkeypatch):
     init_result = await init_command.handler(init_args, context)
     assert "Initialized project files" in init_result.message or "already initialized" in init_result.message
     assert (tmp_path / "CLAUDE.md").exists()
-    assert (tmp_path / ".openharness" / "memory" / "MEMORY.md").exists()
+    assert (tmp_path / ".agentschool" / "memory" / "MEMORY.md").exists()
 
     bridge_show_command, bridge_show_args = registry.lookup("/bridge show")
     bridge_show_result = await bridge_show_command.handler(bridge_show_args, context)
@@ -746,8 +683,8 @@ async def test_init_and_bridge_commands(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_copy_rewind_and_meta_commands(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     registry = create_default_command_registry()
     context = _make_context(tmp_path)
     context.engine.load_messages(
@@ -794,9 +731,9 @@ async def test_copy_rewind_and_meta_commands(tmp_path: Path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_mcp_and_voice_commands_report_richer_state(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+async def test_mcp_command_reports_richer_state(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     settings = Settings(
         mcp_servers={
             "http-demo": McpHttpServerConfig(url="https://example.com/mcp"),
@@ -818,26 +755,19 @@ async def test_mcp_and_voice_commands_report_richer_state(tmp_path: Path, monkey
     assert "Saved MCP auth for stdio-demo" in mcp_stdio_result.message
     assert load_settings().mcp_servers["stdio-demo"].env["MCP_AUTH_TOKEN"] == "DEMO_TOKEN"
 
-    voice_command, voice_args = registry.lookup("/voice show")
-    voice_result = await voice_command.handler(voice_args, context)
-    assert "Voice mode:" in voice_result.message
-    assert "Available:" in voice_result.message
-    assert "Reason:" in voice_result.message
-
-
 @pytest.mark.asyncio
 async def test_git_commands_report_repository_state(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
     subprocess.run(
-        ["git", "config", "user.email", "openharness@example.com"],
+        ["git", "config", "user.email", "agentschool@example.com"],
         cwd=tmp_path,
         check=True,
         capture_output=True,
         text=True,
     )
     subprocess.run(
-        ["git", "config", "user.name", "OpenHarness Tests"],
+        ["git", "config", "user.name", "AgentSchool Tests"],
         cwd=tmp_path,
         check=True,
         capture_output=True,

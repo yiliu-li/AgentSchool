@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from openharness.swarm import lockfile
-from openharness.utils import file_lock
+from agentschool.swarm import lockfile
+from agentschool.utils import file_lock
 
 
 def test_exclusive_file_lock_creates_lock_file_on_posix(tmp_path: Path):
@@ -28,8 +28,8 @@ def test_exclusive_file_lock_routes_windows_branch(monkeypatch, tmp_path: Path):
         calls.append(lock_path)
         yield
 
-    # The implementation lives in ``openharness.utils.file_lock``;
-    # ``openharness.swarm.lockfile`` re-exports it for backwards compatibility.
+    # The implementation lives in ``agentschool.utils.file_lock``;
+    # ``agentschool.swarm.lockfile`` re-exports it for backwards compatibility.
     monkeypatch.setattr(file_lock, "_exclusive_windows_lock", _fake_windows_lock)
 
     lock_path = tmp_path / "windows.lock"

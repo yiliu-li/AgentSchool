@@ -29,7 +29,18 @@ frontend/terminal/node_modules/
 
 # User data (never commit API keys or session data)
 .openharness/
+.agentschool/
 react_tui_smoke.txt
+
+# Local environment variants
+.env.*
+!.env.example
+!.env.sample
+
+# Logs and local reports
+*.log
+coverage.xml
+pytest.xml
 
 # OS
 .DS_Store

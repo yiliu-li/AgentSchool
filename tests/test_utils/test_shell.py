@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from openharness.config.settings import Settings
-from openharness.utils.shell import create_shell_subprocess, resolve_shell_command
+from agentschool.config.settings import Settings
+from agentschool.utils.shell import create_shell_subprocess, resolve_shell_command
 
 
 def test_resolve_shell_command_prefers_bash_on_linux(monkeypatch):
     monkeypatch.setattr(
-        "openharness.utils.shell.shutil.which",
+        "agentschool.utils.shell.shutil.which",
         lambda name: "/usr/bin/bash" if name == "bash" else None,
     )
 
@@ -30,7 +30,7 @@ def test_resolve_shell_command_wraps_with_script_when_pty_requested(monkeypatch)
         }
         return mapping.get(name)
 
-    monkeypatch.setattr("openharness.utils.shell.shutil.which", fake_which)
+    monkeypatch.setattr("agentschool.utils.shell.shutil.which", fake_which)
 
     command = resolve_shell_command("echo hi", platform_name="linux", prefer_pty=True)
 
@@ -44,7 +44,7 @@ def test_resolve_shell_command_uses_powershell_on_windows(monkeypatch):
         }
         return mapping.get(name)
 
-    monkeypatch.setattr("openharness.utils.shell.shutil.which", fake_which)
+    monkeypatch.setattr("agentschool.utils.shell.shutil.which", fake_which)
 
     command = resolve_shell_command("Write-Output hi", platform_name="windows")
 
@@ -65,7 +65,7 @@ def test_resolve_shell_command_skips_script_on_macos(monkeypatch):
         }
         return mapping.get(name)
 
-    monkeypatch.setattr("openharness.utils.shell.shutil.which", fake_which)
+    monkeypatch.setattr("agentschool.utils.shell.shutil.which", fake_which)
 
     command = resolve_shell_command("echo hi", platform_name="macos", prefer_pty=True)
 
@@ -79,7 +79,7 @@ def test_resolve_shell_command_linux_without_script_falls_back(monkeypatch):
         }
         return mapping.get(name)
 
-    monkeypatch.setattr("openharness.utils.shell.shutil.which", fake_which)
+    monkeypatch.setattr("agentschool.utils.shell.shutil.which", fake_which)
 
     command = resolve_shell_command("echo hi", platform_name="linux", prefer_pty=True)
 
@@ -103,15 +103,15 @@ async def test_create_shell_subprocess_defaults_stdin_to_devnull(monkeypatch, tm
         return _FakeProcess()
 
     monkeypatch.setattr(
-        "openharness.utils.shell.asyncio.create_subprocess_exec",
+        "agentschool.utils.shell.asyncio.create_subprocess_exec",
         fake_create_subprocess_exec,
     )
     monkeypatch.setattr(
-        "openharness.utils.shell.wrap_command_for_sandbox",
+        "agentschool.utils.shell.wrap_command_for_sandbox",
         lambda argv, settings=None: (argv, None),
     )
     monkeypatch.setattr(
-        "openharness.utils.shell.shutil.which",
+        "agentschool.utils.shell.shutil.which",
         lambda name: "/usr/bin/bash" if name == "bash" else None,
     )
 

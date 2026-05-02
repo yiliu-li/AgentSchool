@@ -8,10 +8,10 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-import openharness.cli as cli
-from openharness.config import load_settings
-from openharness.config.settings import Settings
-from openharness.mcp.types import McpStdioServerConfig
+import agentschool.cli as cli
+from agentschool.config import load_settings
+from agentschool.config.settings import Settings
+from agentschool.mcp.types import McpStdioServerConfig
 
 
 app = cli.app
@@ -26,14 +26,14 @@ def test_cli_help():
     )
     plain_output = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
     assert result.exit_code == 0
-    assert "Oh my Harness!" in plain_output
+    assert "AgentSchool command-line runtime." in plain_output
     assert "setup" in plain_output
     assert "--dry-run" in plain_output
 
 
 def test_setup_flow_selects_profile_and_model(tmp_path: Path, monkeypatch):
     runner = CliRunner()
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path))
 
     selected = []
 
@@ -46,9 +46,9 @@ def test_setup_flow_selects_profile_and_model(tmp_path: Path, monkeypatch):
     def fake_login(provider):
         logged_in.append(provider)
 
-    monkeypatch.setattr("openharness.cli._select_setup_workflow", fake_select)
-    monkeypatch.setattr("openharness.cli._prompt_model_for_profile", lambda profile: "gpt-5.4")
-    monkeypatch.setattr("openharness.cli._login_provider", fake_login)
+    monkeypatch.setattr("agentschool.cli._select_setup_workflow", fake_select)
+    monkeypatch.setattr("agentschool.cli._prompt_model_for_profile", lambda profile: "gpt-5.4")
+    monkeypatch.setattr("agentschool.cli._login_provider", fake_login)
 
     result = runner.invoke(app, ["setup"])
     assert result.exit_code == 0
@@ -94,7 +94,7 @@ def test_select_from_menu_uses_questionary_when_tty(monkeypatch):
 
 def test_setup_flow_creates_kimi_profile_with_profile_scoped_key(tmp_path: Path, monkeypatch):
     runner = CliRunner()
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path))
 
     selections = iter(["claude-api", "kimi-anthropic"])
     prompts = iter(
@@ -104,10 +104,10 @@ def test_setup_flow_creates_kimi_profile_with_profile_scoped_key(tmp_path: Path,
         ]
     )
 
-    monkeypatch.setattr("openharness.cli._select_setup_workflow", lambda *args, **kwargs: next(selections))
-    monkeypatch.setattr("openharness.cli._select_from_menu", lambda *args, **kwargs: next(selections))
-    monkeypatch.setattr("openharness.cli._text_prompt", lambda *args, **kwargs: next(prompts))
-    monkeypatch.setattr("openharness.auth.flows.ApiKeyFlow.run", lambda self: "sk-kimi-test")
+    monkeypatch.setattr("agentschool.cli._select_setup_workflow", lambda *args, **kwargs: next(selections))
+    monkeypatch.setattr("agentschool.cli._select_from_menu", lambda *args, **kwargs: next(selections))
+    monkeypatch.setattr("agentschool.cli._text_prompt", lambda *args, **kwargs: next(prompts))
+    monkeypatch.setattr("agentschool.auth.flows.ApiKeyFlow.run", lambda self: "sk-kimi-test")
 
     result = runner.invoke(app, ["setup"])
     assert result.exit_code == 0
@@ -121,24 +121,39 @@ def test_setup_flow_creates_kimi_profile_with_profile_scoped_key(tmp_path: Path,
     assert profile.credential_slot == "kimi-anthropic"
     assert profile.allowed_models == ["kimi-k2.5"]
 
-    from openharness.auth.storage import load_credential
+    from agentschool.auth.storage import load_credential
 
     assert load_credential("profile:kimi-anthropic", "api_key") == "sk-kimi-test"
 
 
-def test_dangerously_skip_permissions_passes_full_auto_to_run_repl(monkeypatch):
+def test_setup_flow_openrouter_offers_curated_model_choices(tmp_path: Path, monkeypatch):
     runner = CliRunner()
-    captured = {}
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path))
 
-    async def fake_run_repl(**kwargs):
-        captured.update(kwargs)
+    selections = iter(["openai-compatible", "openrouter", "anthropic/claude-opus-4.7"])
+    monkeypatch.setattr("agentschool.cli._select_setup_workflow", lambda *args, **kwargs: next(selections))
+    monkeypatch.setattr("agentschool.cli._select_from_menu", lambda *args, **kwargs: next(selections))
+    monkeypatch.setattr("agentschool.cli._text_prompt", lambda *args, **kwargs: "https://openrouter.ai/api/v1")
+    monkeypatch.setattr("agentschool.auth.flows.ApiKeyFlow.run", lambda self: "sk-or-test")
+    monkeypatch.setattr("agentschool.cli._prompt_model_for_profile", lambda profile: profile.default_model)
 
-    monkeypatch.setattr("openharness.ui.app.run_repl", fake_run_repl)
-
-    result = runner.invoke(app, ["--dangerously-skip-permissions"])
+    result = runner.invoke(app, ["setup"])
 
     assert result.exit_code == 0
-    assert captured["permission_mode"] == "full_auto"
+    settings = load_settings()
+    profile = settings.resolve_profile()[1]
+    assert settings.active_profile == "openrouter"
+    assert profile.default_model == "anthropic/claude-opus-4.7"
+    assert "openai/gpt-5.4" in profile.allowed_models
+    assert "anthropic/claude-sonnet-4.6" in profile.allowed_models
+
+
+def test_default_invocation_no_longer_starts_interactive_session():
+    runner = CliRunner()
+    result = runner.invoke(app, ["--dangerously-skip-permissions"])
+
+    assert result.exit_code == 1
+    assert "No default interactive session is available." in result.output
 
 
 def test_task_worker_flag_routes_to_run_task_worker(monkeypatch):
@@ -148,7 +163,7 @@ def test_task_worker_flag_routes_to_run_task_worker(monkeypatch):
     async def fake_run_task_worker(**kwargs):
         captured.update(kwargs)
 
-    monkeypatch.setattr("openharness.ui.app.run_task_worker", fake_run_task_worker)
+    monkeypatch.setattr("agentschool.ui.app.run_task_worker", fake_run_task_worker)
 
     result = runner.invoke(app, ["--task-worker", "--model", "kimi-k2.5"])
 
@@ -156,7 +171,93 @@ def test_task_worker_flag_routes_to_run_task_worker(monkeypatch):
     assert captured["model"] == "kimi-k2.5"
 
 
-def test_dry_run_uses_preview_builder_and_skips_repl(monkeypatch):
+def test_learn_cli_runs_exam_gated_learning_workflow(tmp_path: Path, monkeypatch):
+    runner = CliRunner()
+    captured = {}
+
+    async def fake_run_learning_workflow(**kwargs):
+        captured.update(kwargs)
+        workspace = kwargs["workspace"]
+        workspace.skill_file.parent.mkdir(parents=True, exist_ok=True)
+        workspace.skill_file.write_text("---\nname: learned\n---\n# Learned\n", encoding="utf-8")
+        from agentschool.learning import LearningRunSummary
+
+        return LearningRunSummary(
+            workspace=workspace,
+            attempts=2,
+            final_score=30,
+            max_score=30,
+            passed=True,
+        )
+
+    monkeypatch.setattr("agentschool.learning.run_learning_workflow", fake_run_learning_workflow)
+
+    result = runner.invoke(
+        app,
+        [
+            "learn",
+            "debug Playwright flaky tests",
+            "--root",
+            str(tmp_path / "learn"),
+            "--cwd",
+            str(tmp_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    workspace = captured["workspace"]
+    assert workspace.session_cwd == tmp_path.resolve()
+    assert workspace.goal_name == "debug Playwright flaky tests"
+    assert workspace.skill_file == tmp_path / "learn" / "topics" / "debug-playwright-flaky-tests" / "skill" / "SKILL.md"
+    assert captured["max_turns"] is None
+    assert "passed after 2 exam attempt" in result.output.lower()
+
+
+def test_learn_cli_task_exports_skill_bundle(tmp_path: Path, monkeypatch):
+    task = tmp_path / "tasks" / "react-performance-debugging"
+    task.mkdir(parents=True)
+    (task / "instruction.md").write_text("Fix a React rendering slowdown.\n", encoding="utf-8")
+    (task / "solution").mkdir()
+    (task / "solution" / "secret.txt").write_text("hidden solution", encoding="utf-8")
+
+    async def fake_run_learning_workflow(**kwargs):
+        workspace = kwargs["workspace"]
+        (workspace.skill_dir / "refs").mkdir(parents=True, exist_ok=True)
+        workspace.skill_file.write_text("---\nname: learned\n---\n# Learned\n", encoding="utf-8")
+        from agentschool.learning import LearningRunSummary
+
+        return LearningRunSummary(
+            workspace=workspace,
+            attempts=1,
+            final_score=30,
+            max_score=30,
+            passed=True,
+        )
+
+    monkeypatch.setattr("agentschool.learning.run_learning_workflow", fake_run_learning_workflow)
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "learn",
+            "--task",
+            str(task),
+            "--root",
+            str(tmp_path / "learn"),
+            "--cwd",
+            str(tmp_path),
+            "--export-skills-dir",
+            str(tmp_path / "generated"),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert (tmp_path / "learn" / "instruction-only" / "react-performance-debugging" / "instruction.md").exists()
+    assert not (tmp_path / "learn" / "instruction-only" / "react-performance-debugging" / "solution").exists()
+    assert (tmp_path / "generated" / "react-performance-debugging" / "SKILL.md").exists()
+
+
+def test_dry_run_uses_preview_builder(monkeypatch):
     runner = CliRunner()
     captured = {}
 
@@ -192,18 +293,14 @@ def test_dry_run_uses_preview_builder_and_skips_repl(monkeypatch):
             "system_prompt_preview": "preview",
         }
 
-    async def fake_run_repl(**kwargs):  # pragma: no cover - should never be called
-        raise AssertionError(f"run_repl should not be called during dry-run: {kwargs}")
-
-    monkeypatch.setattr("openharness.cli._build_dry_run_preview", fake_build_dry_run_preview)
-    monkeypatch.setattr("openharness.ui.app.run_repl", fake_run_repl)
+    monkeypatch.setattr("agentschool.cli._build_dry_run_preview", fake_build_dry_run_preview)
 
     result = runner.invoke(app, ["--dry-run", "--print", "ship it", "--model", "gpt-5.4"])
 
     assert result.exit_code == 0
     assert captured["prompt"] == "ship it"
     assert captured["model"] == "gpt-5.4"
-    assert "OpenHarness Dry Run" in result.output
+    assert "AgentSchool Dry Run" in result.output
     assert "ship it" in result.output
 
 
@@ -243,7 +340,7 @@ def test_dry_run_json_output(monkeypatch):
             "system_prompt_preview": "preview",
         }
 
-    monkeypatch.setattr("openharness.cli._build_dry_run_preview", fake_build_dry_run_preview)
+    monkeypatch.setattr("agentschool.cli._build_dry_run_preview", fake_build_dry_run_preview)
 
     result = runner.invoke(app, ["--dry-run", "--output-format", "json", "--print", "preview this"])
 
@@ -253,21 +350,11 @@ def test_dry_run_json_output(monkeypatch):
     assert payload["prompt"] == "preview this"
 
 
-def test_dry_run_rejects_continue_resume(monkeypatch):
-    runner = CliRunner()
-    monkeypatch.setattr("openharness.cli._build_dry_run_preview", lambda **kwargs: {"mode": "dry-run"})
-
-    result = runner.invoke(app, ["--dry-run", "--continue"])
-
-    assert result.exit_code == 1
-    assert "--dry-run does not support --continue/--resume yet" in result.output
-
-
 def test_build_dry_run_preview_classifies_slash_command_and_flags_bad_mcp(monkeypatch, tmp_path: Path):
     settings = Settings(
         api_key="sk-test",
         mcp_servers={
-            "broken": McpStdioServerConfig(command="definitely-not-a-real-command-openharness"),
+            "broken": McpStdioServerConfig(command="definitely-not-a-real-command-agentschool"),
         },
     )
 
@@ -275,16 +362,16 @@ def test_build_dry_run_preview_classifies_slash_command_and_flags_bad_mcp(monkey
         def list_skills(self):
             return []
 
-    monkeypatch.setattr("openharness.config.load_settings", lambda: settings)
+    monkeypatch.setattr("agentschool.config.load_settings", lambda: settings)
     monkeypatch.setattr(
-        "openharness.api.provider.detect_provider",
+        "agentschool.api.provider.detect_provider",
         lambda settings: types.SimpleNamespace(name="anthropic"),
     )
-    monkeypatch.setattr("openharness.api.provider.auth_status", lambda settings: "configured")
-    monkeypatch.setattr("openharness.plugins.load_plugins", lambda settings, cwd: [])
-    monkeypatch.setattr("openharness.skills.load_skill_registry", lambda cwd, settings=None: _FakeSkillRegistry())
-    monkeypatch.setattr("openharness.prompts.context.build_runtime_system_prompt", lambda *args, **kwargs: "preview prompt")
-    monkeypatch.setattr("openharness.ui.runtime._resolve_api_client_from_settings", lambda settings: object())
+    monkeypatch.setattr("agentschool.api.provider.auth_status", lambda settings: "configured")
+    monkeypatch.setattr("agentschool.plugins.load_plugins", lambda settings, cwd: [])
+    monkeypatch.setattr("agentschool.skills.load_skill_registry", lambda cwd, settings=None: _FakeSkillRegistry())
+    monkeypatch.setattr("agentschool.prompts.context.build_runtime_system_prompt", lambda *args, **kwargs: "preview prompt")
+    monkeypatch.setattr("agentschool.ui.runtime._resolve_api_client_from_settings", lambda settings: object())
 
     preview = cli._build_dry_run_preview(
         prompt="/plugin list",
@@ -316,20 +403,20 @@ def test_build_dry_run_preview_sets_blocked_when_model_prompt_lacks_auth(monkeyp
         def list_skills(self):
             return []
 
-    monkeypatch.setattr("openharness.config.load_settings", lambda: settings)
+    monkeypatch.setattr("agentschool.config.load_settings", lambda: settings)
     monkeypatch.setattr(
-        "openharness.api.provider.detect_provider",
+        "agentschool.api.provider.detect_provider",
         lambda settings: types.SimpleNamespace(name="anthropic"),
     )
-    monkeypatch.setattr("openharness.api.provider.auth_status", lambda settings: "missing")
-    monkeypatch.setattr("openharness.plugins.load_plugins", lambda settings, cwd: [])
-    monkeypatch.setattr("openharness.skills.load_skill_registry", lambda cwd, settings=None: _FakeSkillRegistry())
-    monkeypatch.setattr("openharness.prompts.context.build_runtime_system_prompt", lambda *args, **kwargs: "preview prompt")
+    monkeypatch.setattr("agentschool.api.provider.auth_status", lambda settings: "missing")
+    monkeypatch.setattr("agentschool.plugins.load_plugins", lambda settings, cwd: [])
+    monkeypatch.setattr("agentschool.skills.load_skill_registry", lambda cwd, settings=None: _FakeSkillRegistry())
+    monkeypatch.setattr("agentschool.prompts.context.build_runtime_system_prompt", lambda *args, **kwargs: "preview prompt")
 
     def fake_resolve_api_client(settings):
         raise SystemExit(1)
 
-    monkeypatch.setattr("openharness.ui.runtime._resolve_api_client_from_settings", fake_resolve_api_client)
+    monkeypatch.setattr("agentschool.ui.runtime._resolve_api_client_from_settings", fake_resolve_api_client)
 
     preview = cli._build_dry_run_preview(
         prompt="fix the failing tests",
@@ -385,17 +472,17 @@ def test_build_dry_run_preview_recommends_matching_skills_and_tools(monkeypatch,
                 },
             ]
 
-    monkeypatch.setattr("openharness.config.load_settings", lambda: settings)
+    monkeypatch.setattr("agentschool.config.load_settings", lambda: settings)
     monkeypatch.setattr(
-        "openharness.api.provider.detect_provider",
+        "agentschool.api.provider.detect_provider",
         lambda settings: types.SimpleNamespace(name="anthropic"),
     )
-    monkeypatch.setattr("openharness.api.provider.auth_status", lambda settings: "configured")
-    monkeypatch.setattr("openharness.plugins.load_plugins", lambda settings, cwd: [])
-    monkeypatch.setattr("openharness.skills.load_skill_registry", lambda cwd, settings=None: _FakeSkillRegistry())
-    monkeypatch.setattr("openharness.tools.create_default_tool_registry", lambda: _FakeToolRegistry())
-    monkeypatch.setattr("openharness.prompts.context.build_runtime_system_prompt", lambda *args, **kwargs: "preview prompt")
-    monkeypatch.setattr("openharness.ui.runtime._resolve_api_client_from_settings", lambda settings: object())
+    monkeypatch.setattr("agentschool.api.provider.auth_status", lambda settings: "configured")
+    monkeypatch.setattr("agentschool.plugins.load_plugins", lambda settings, cwd: [])
+    monkeypatch.setattr("agentschool.skills.load_skill_registry", lambda cwd, settings=None: _FakeSkillRegistry())
+    monkeypatch.setattr("agentschool.tools.create_default_tool_registry", lambda: _FakeToolRegistry())
+    monkeypatch.setattr("agentschool.prompts.context.build_runtime_system_prompt", lambda *args, **kwargs: "preview prompt")
+    monkeypatch.setattr("agentschool.ui.runtime._resolve_api_client_from_settings", lambda settings: object())
 
     preview = cli._build_dry_run_preview(
         prompt="review this bug fix and grep for failing tests",
@@ -417,63 +504,3 @@ def test_build_dry_run_preview_recommends_matching_skills_and_tools(monkeypatch,
     assert any("you can run this prompt directly" in action.lower() for action in preview["readiness"]["next_actions"])
     assert "review" in recommended_skills
     assert "grep" in recommended_tools
-
-
-def test_autopilot_run_next_cli(monkeypatch, tmp_path: Path):
-    runner = CliRunner()
-
-    class FakeStore:
-        def __init__(self, cwd):
-            self.cwd = cwd
-
-        async def run_next(self, *, model=None, max_turns=None, permission_mode=None):
-            class Result:
-                card_id = "ap-1234"
-                status = "completed"
-                run_report_path = "/tmp/run.md"
-                verification_report_path = "/tmp/verify.md"
-
-            return Result()
-
-    monkeypatch.setattr("openharness.autopilot.RepoAutopilotStore", FakeStore)
-
-    result = runner.invoke(app, ["autopilot", "run-next", "--cwd", str(tmp_path)])
-
-    assert result.exit_code == 0
-    assert "ap-1234 -> completed" in result.output
-
-
-def test_autopilot_install_cron_cli(monkeypatch, tmp_path: Path):
-    runner = CliRunner()
-
-    class FakeStore:
-        def __init__(self, cwd):
-            self.cwd = cwd
-
-        def install_default_cron(self):
-            return ["autopilot.scan", "autopilot.tick"]
-
-    monkeypatch.setattr("openharness.autopilot.RepoAutopilotStore", FakeStore)
-
-    result = runner.invoke(app, ["autopilot", "install-cron", "--cwd", str(tmp_path)])
-
-    assert result.exit_code == 0
-    assert "autopilot.scan" in result.output
-
-
-def test_autopilot_export_dashboard_cli(monkeypatch, tmp_path: Path):
-    runner = CliRunner()
-
-    class FakeStore:
-        def __init__(self, cwd):
-            self.cwd = cwd
-
-        def export_dashboard(self, output=None):
-            return tmp_path / "docs" / "autopilot"
-
-    monkeypatch.setattr("openharness.autopilot.RepoAutopilotStore", FakeStore)
-
-    result = runner.invoke(app, ["autopilot", "export-dashboard", "--cwd", str(tmp_path)])
-
-    assert result.exit_code == 0
-    assert "Exported autopilot dashboard" in result.output

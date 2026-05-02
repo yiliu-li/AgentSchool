@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from openharness.tasks.manager import BackgroundTaskManager
-from openharness.tasks.types import TaskRecord
-from openharness.swarm.subprocess_backend import SubprocessBackend
-from openharness.swarm.types import TeammateSpawnConfig
+from agentschool.tasks.manager import BackgroundTaskManager
+from agentschool.tasks.types import TaskRecord
+from agentschool.swarm.subprocess_backend import SubprocessBackend
+from agentschool.swarm.types import TeammateSpawnConfig
 
 
 @pytest.mark.asyncio
@@ -29,8 +29,8 @@ async def test_subprocess_backend_forwards_system_prompt_in_command(monkeypatch,
         )
 
     monkeypatch.setattr(BackgroundTaskManager, "create_agent_task", _fake_create_agent_task)
-    monkeypatch.setattr("openharness.swarm.subprocess_backend.get_teammate_command", lambda: "/usr/bin/python3")
-    monkeypatch.setattr("openharness.swarm.subprocess_backend.build_inherited_env_vars", lambda: {})
+    monkeypatch.setattr("agentschool.swarm.subprocess_backend.get_teammate_command", lambda: "/usr/bin/python3")
+    monkeypatch.setattr("agentschool.swarm.subprocess_backend.build_inherited_env_vars", lambda: {})
 
     backend = SubprocessBackend()
     config = TeammateSpawnConfig(
@@ -68,8 +68,8 @@ async def test_subprocess_backend_forwards_append_system_prompt_mode(monkeypatch
         )
 
     monkeypatch.setattr(BackgroundTaskManager, "create_agent_task", _fake_create_agent_task)
-    monkeypatch.setattr("openharness.swarm.subprocess_backend.get_teammate_command", lambda: "/usr/bin/python3")
-    monkeypatch.setattr("openharness.swarm.subprocess_backend.build_inherited_env_vars", lambda: {})
+    monkeypatch.setattr("agentschool.swarm.subprocess_backend.get_teammate_command", lambda: "/usr/bin/python3")
+    monkeypatch.setattr("agentschool.swarm.subprocess_backend.build_inherited_env_vars", lambda: {})
 
     backend = SubprocessBackend()
     config = TeammateSpawnConfig(

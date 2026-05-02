@@ -1,4 +1,4 @@
-"""Tests for openharness.config.settings."""
+"""Tests for agentschool.config.settings."""
 
 from __future__ import annotations
 
@@ -7,8 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from openharness.auth.storage import store_credential
-from openharness.config.settings import (
+from agentschool.auth.storage import store_credential
+from agentschool.config.settings import (
+    OPENROUTER_ALLOWED_MODELS,
     ProviderProfile,
     Settings,
     display_model_setting,
@@ -24,7 +25,8 @@ class TestSettings:
     def test_defaults(self):
         s = Settings()
         assert s.api_key == ""
-        assert s.model == "claude-sonnet-4-6"
+        assert s.model == "openrouter/auto"
+        assert s.active_profile == "openrouter"
         assert s.max_tokens == 16384
         assert s.timeout == 30.0
         assert s.max_turns == 200
@@ -38,16 +40,17 @@ class TestSettings:
         assert s.resolve_api_key() == "sk-test-123"
 
     def test_resolve_api_key_from_env(self, monkeypatch):
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-env-456")
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-env-456")
         s = Settings()
-        assert s.resolve_api_key() == "sk-env-456"
+        assert s.resolve_api_key() == "sk-or-env-456"
 
     def test_resolve_api_key_instance_takes_precedence(self, monkeypatch):
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-env-456")
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-env-456")
         s = Settings(api_key="sk-instance-789")
         assert s.resolve_api_key() == "sk-instance-789"
 
     def test_resolve_api_key_missing_raises(self, monkeypatch):
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         s = Settings()
@@ -85,6 +88,7 @@ class TestSettings:
         still fall back to the flat api_key field."""
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         s = Settings(api_key="sk-fallback-key")
         s = s.sync_active_profile_from_flat_fields()
         auth = s.resolve_auth()
@@ -94,7 +98,7 @@ class TestSettings:
         """_apply_env_overrides should pick up OPENAI_BASE_URL for relay
         providers that use OpenAI-compatible format."""
         monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
-        monkeypatch.delenv("OPENHARNESS_BASE_URL", raising=False)
+        monkeypatch.delenv("AGENTSCHOOL_BASE_URL", raising=False)
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.setenv("OPENAI_BASE_URL", "https://relay.example.com/v1")
         monkeypatch.setenv("OPENAI_API_KEY", "sk-relay-key")
@@ -104,8 +108,8 @@ class TestSettings:
         assert s.base_url == "https://relay.example.com/v1"
 
     def test_env_overrides_pick_up_compact_threshold_settings(self, tmp_path: Path, monkeypatch):
-        monkeypatch.setenv("OPENHARNESS_CONTEXT_WINDOW_TOKENS", "123456")
-        monkeypatch.setenv("OPENHARNESS_AUTO_COMPACT_THRESHOLD_TOKENS", "120000")
+        monkeypatch.setenv("AGENTSCHOOL_CONTEXT_WINDOW_TOKENS", "123456")
+        monkeypatch.setenv("AGENTSCHOOL_AUTO_COMPACT_THRESHOLD_TOKENS", "120000")
         path = tmp_path / "settings.json"
         path.write_text(json.dumps({}))
         s = load_settings(path)
@@ -127,11 +131,12 @@ class TestLoadSaveSettings:
     def test_load_missing_file_returns_defaults(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
         monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
-        monkeypatch.delenv("OPENHARNESS_BASE_URL", raising=False)
+        monkeypatch.delenv("AGENTSCHOOL_BASE_URL", raising=False)
         monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
-        monkeypatch.delenv("OPENHARNESS_MODEL", raising=False)
+        monkeypatch.delenv("AGENTSCHOOL_MODEL", raising=False)
         path = tmp_path / "nonexistent.json"
         s = load_settings(path)
         assert s == Settings().materialize_active_profile()
@@ -139,10 +144,11 @@ class TestLoadSaveSettings:
     def test_load_existing_file(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
         monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
         monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
-        monkeypatch.delenv("OPENHARNESS_MODEL", raising=False)
+        monkeypatch.delenv("AGENTSCHOOL_MODEL", raising=False)
         path = tmp_path / "settings.json"
         path.write_text(json.dumps({"model": "claude-opus-4-20250514", "verbose": True, "fast_mode": True}))
         s = load_settings(path)
@@ -154,10 +160,11 @@ class TestLoadSaveSettings:
     def test_save_and_load_roundtrip(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
         monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
         monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
-        monkeypatch.delenv("OPENHARNESS_MODEL", raising=False)
+        monkeypatch.delenv("AGENTSCHOOL_MODEL", raising=False)
         path = tmp_path / "settings.json"
         original = Settings(api_key="sk-roundtrip", model="claude-opus-4-20250514", verbose=True)
         save_settings(original, path)
@@ -396,7 +403,7 @@ class TestLoadSaveSettings:
         assert materialized.model == "claude-opus-4-6"
 
     def test_resolve_auth_prefers_profile_scoped_credential_for_custom_compatible_profile(self, tmp_path: Path, monkeypatch):
-        monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path))
+        monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path))
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-global-env")
         store_credential("profile:kimi-anthropic", "api_key", "sk-profile-specific", use_keyring=False)
         settings = Settings(
@@ -450,11 +457,11 @@ def test_normalize_anthropic_model_name_matches_hermes_behavior():
         path.write_text(json.dumps({"model": "from-file", "base_url": "https://file.example"}))
         monkeypatch.setenv("ANTHROPIC_MODEL", "from-env-model")
         monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://env.example/anthropic")
-        monkeypatch.setenv("OPENHARNESS_TIMEOUT", "42.5")
-        monkeypatch.setenv("OPENHARNESS_MAX_TURNS", "42")
+        monkeypatch.setenv("AGENTSCHOOL_TIMEOUT", "42.5")
+        monkeypatch.setenv("AGENTSCHOOL_MAX_TURNS", "42")
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-env-override")
-        monkeypatch.setenv("OPENHARNESS_SANDBOX_ENABLED", "true")
-        monkeypatch.setenv("OPENHARNESS_SANDBOX_FAIL_IF_UNAVAILABLE", "1")
+        monkeypatch.setenv("AGENTSCHOOL_SANDBOX_ENABLED", "true")
+        monkeypatch.setenv("AGENTSCHOOL_SANDBOX_FAIL_IF_UNAVAILABLE", "1")
 
         s = load_settings(path)
 
@@ -517,9 +524,9 @@ class TestAnsiEscapeSequences:
         updated = _apply_env_overrides(s)
         assert updated.model == "claude-opus-4-6"
 
-    def test_env_override_strips_ansi_from_openharness_model(self, monkeypatch):
-        """Test that ANSI escape sequences are stripped from OPENHARNESS_MODEL env var."""
-        monkeypatch.setenv("OPENHARNESS_MODEL", "\x1b[32mclaude-sonnet-4-6\x1b[0m")
+    def test_env_override_strips_ansi_from_agentschool_model(self, monkeypatch):
+        """Test that ANSI escape sequences are stripped from AGENTSCHOOL_MODEL env var."""
+        monkeypatch.setenv("AGENTSCHOOL_MODEL", "\x1b[32mclaude-sonnet-4-6\x1b[0m")
         s = Settings()
         updated = _apply_env_overrides(s)
         assert updated.model == "claude-sonnet-4-6"
@@ -535,7 +542,7 @@ class TestMiniMaxProvider:
     """Tests for MiniMax provider profile and auth integration."""
 
     def test_minimax_in_default_provider_profiles(self):
-        from openharness.config.settings import default_provider_profiles
+        from agentschool.config.settings import default_provider_profiles
 
         profiles = default_provider_profiles()
         assert "minimax" in profiles
@@ -547,12 +554,12 @@ class TestMiniMaxProvider:
         assert profile.base_url == "https://api.minimax.io/v1"
 
     def test_auth_source_provider_name_minimax(self):
-        from openharness.config.settings import auth_source_provider_name
+        from agentschool.config.settings import auth_source_provider_name
 
         assert auth_source_provider_name("minimax_api_key") == "minimax"
 
     def test_default_auth_source_for_minimax_provider(self):
-        from openharness.config.settings import default_auth_source_for_provider
+        from agentschool.config.settings import default_auth_source_for_provider
 
         assert default_auth_source_for_provider("minimax") == "minimax_api_key"
 
@@ -595,11 +602,76 @@ class TestMiniMaxProvider:
         assert materialized.api_format == "openai"
 
 
+class TestOpenRouterProvider:
+    """Tests for OpenRouter provider profile and auth integration."""
+
+    def test_openrouter_in_default_provider_profiles(self):
+        from agentschool.config.settings import default_provider_profiles
+
+        profiles = default_provider_profiles()
+        assert "openrouter" in profiles
+        profile = profiles["openrouter"]
+        assert profile.provider == "openrouter"
+        assert profile.api_format == "openai"
+        assert profile.auth_source == "openrouter_api_key"
+        assert profile.default_model == "openrouter/auto"
+        assert profile.base_url == "https://openrouter.ai/api/v1"
+        assert profile.allowed_models == list(OPENROUTER_ALLOWED_MODELS)
+
+    def test_merged_profiles_backfill_openrouter_allowed_models_for_existing_settings(self):
+        settings = Settings(
+            profiles={
+                "openrouter": ProviderProfile(
+                    label="OpenRouter",
+                    provider="openrouter",
+                    api_format="openai",
+                    auth_source="openrouter_api_key",
+                    default_model="openrouter/auto",
+                    base_url="https://openrouter.ai/api/v1",
+                    allowed_models=[],
+                )
+            }
+        )
+
+        merged = settings.merged_profiles()
+
+        assert merged["openrouter"].allowed_models == list(OPENROUTER_ALLOWED_MODELS)
+
+    def test_auth_source_provider_name_openrouter(self):
+        from agentschool.config.settings import auth_source_provider_name
+
+        assert auth_source_provider_name("openrouter_api_key") == "openrouter"
+
+    def test_default_auth_source_for_openrouter_provider(self):
+        from agentschool.config.settings import default_auth_source_for_provider
+
+        assert default_auth_source_for_provider("openrouter") == "openrouter_api_key"
+
+    def test_resolve_auth_reads_openrouter_api_key_env(self, monkeypatch):
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test-key")
+        settings = Settings(
+            active_profile="openrouter",
+            profiles={
+                "openrouter": ProviderProfile(
+                    label="OpenRouter",
+                    provider="openrouter",
+                    api_format="openai",
+                    auth_source="openrouter_api_key",
+                    default_model="openrouter/auto",
+                    base_url="https://openrouter.ai/api/v1",
+                )
+            },
+        )
+        resolved = settings.resolve_auth()
+        assert resolved.value == "sk-or-test-key"
+        assert "OPENROUTER_API_KEY" in resolved.source
+
+
 class TestQwenProvider:
     """Tests for Qwen (DashScope) provider profile and auth integration."""
 
     def test_qwen_in_default_provider_profiles(self):
-        from openharness.config.settings import default_provider_profiles
+        from agentschool.config.settings import default_provider_profiles
 
         profiles = default_provider_profiles()
         assert "qwen" in profiles
@@ -611,12 +683,12 @@ class TestQwenProvider:
         assert profile.base_url == "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
     def test_auth_source_provider_name_qwen(self):
-        from openharness.config.settings import auth_source_provider_name
+        from agentschool.config.settings import auth_source_provider_name
 
         assert auth_source_provider_name("dashscope_api_key") == "dashscope"
 
     def test_default_auth_source_for_qwen_provider(self):
-        from openharness.config.settings import default_auth_source_for_provider
+        from agentschool.config.settings import default_auth_source_for_provider
 
         assert default_auth_source_for_provider("dashscope") == "dashscope_api_key"
 
@@ -640,7 +712,7 @@ class TestQwenProvider:
         assert "DASHSCOPE_API_KEY" in resolved.source
 
     def test_display_model_setting_for_qwen(self):
-        from openharness.config.settings import display_model_setting
+        from agentschool.config.settings import display_model_setting
 
         profile = ProviderProfile(
             label="Qwen (DashScope)",

@@ -8,14 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from openharness.api.client import ApiMessageCompleteEvent, ApiRetryEvent, ApiTextDeltaEvent
-from openharness.api.errors import RequestFailure
-from openharness.api.usage import UsageSnapshot
-from openharness.config.settings import PermissionSettings, Settings
-from openharness.engine.messages import ConversationMessage, TextBlock, ToolUseBlock
-from openharness.engine.query_engine import QueryEngine
-from openharness.prompts.context import build_runtime_system_prompt
-from openharness.engine.stream_events import (
+from agentschool.api.client import ApiMessageCompleteEvent, ApiRetryEvent, ApiTextDeltaEvent
+from agentschool.api.errors import RequestFailure
+from agentschool.api.usage import UsageSnapshot
+from agentschool.config.settings import PermissionSettings, Settings
+from agentschool.engine.messages import ConversationMessage, TextBlock, ToolUseBlock
+from agentschool.engine.query_engine import QueryEngine
+from agentschool.prompts.context import build_runtime_system_prompt
+from agentschool.engine.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     CompactProgressEvent,
@@ -24,18 +24,18 @@ from openharness.engine.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from openharness.permissions import PermissionChecker, PermissionMode
-from openharness.tasks import get_task_manager
-from openharness.tools import create_default_tool_registry
-from openharness.tools.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
-from openharness.tools.glob_tool import GlobTool
-from openharness.tools.grep_tool import GrepTool
+from agentschool.permissions import PermissionChecker, PermissionMode
+from agentschool.tasks import get_task_manager
+from agentschool.tools import create_default_tool_registry
+from agentschool.tools.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
+from agentschool.tools.glob_tool import GlobTool
+from agentschool.tools.grep_tool import GrepTool
 from pydantic import BaseModel
-from openharness.engine.messages import ToolResultBlock
-from openharness.hooks import HookExecutionContext, HookExecutor, HookEvent
-from openharness.hooks.loader import HookRegistry
-from openharness.hooks.schemas import PromptHookDefinition
-from openharness.engine.query import QueryContext, _execute_tool_call, _is_prompt_too_long_error
+from agentschool.engine.messages import ToolResultBlock
+from agentschool.hooks import HookExecutionContext, HookExecutor, HookEvent
+from agentschool.hooks.loader import HookRegistry
+from agentschool.hooks.schemas import PromptHookDefinition
+from agentschool.engine.query import QueryContext, _execute_tool_call, _is_prompt_too_long_error
 
 
 @dataclass
@@ -255,7 +255,7 @@ async def test_query_engine_executes_tool_calls(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_query_engine_coordinator_mode_uses_coordinator_prompt_and_runs_agent_loop(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("CLAUDE_CODE_COORDINATOR_MODE", "1")
 
     api_client = CoordinatorLoopApiClient()
@@ -352,8 +352,8 @@ async def test_query_engine_surfaces_retry_status_events(tmp_path: Path):
 @pytest.mark.asyncio
 async def test_query_engine_emits_compact_progress_before_reply(tmp_path: Path, monkeypatch):
     long_text = "alpha " * 50000
-    monkeypatch.setattr("openharness.services.compact.try_session_memory_compaction", lambda *args, **kwargs: None)
-    monkeypatch.setattr("openharness.services.compact.should_autocompact", lambda *args, **kwargs: True)
+    monkeypatch.setattr("agentschool.services.compact.try_session_memory_compaction", lambda *args, **kwargs: None)
+    monkeypatch.setattr("agentschool.services.compact.should_autocompact", lambda *args, **kwargs: True)
     engine = QueryEngine(
         api_client=FakeApiClient(
             [
@@ -398,8 +398,8 @@ async def test_query_engine_emits_compact_progress_before_reply(tmp_path: Path, 
 
 @pytest.mark.asyncio
 async def test_query_engine_reactive_compacts_after_prompt_too_long(tmp_path: Path, monkeypatch):
-    monkeypatch.setattr("openharness.services.compact.try_session_memory_compaction", lambda *args, **kwargs: None)
-    monkeypatch.setattr("openharness.services.compact.should_autocompact", lambda *args, **kwargs: False)
+    monkeypatch.setattr("agentschool.services.compact.try_session_memory_compaction", lambda *args, **kwargs: None)
+    monkeypatch.setattr("agentschool.services.compact.should_autocompact", lambda *args, **kwargs: False)
     engine = QueryEngine(
         api_client=PromptTooLongThenSuccessApiClient(),
         tool_registry=create_default_tool_registry(),
@@ -616,7 +616,7 @@ class _RecordingHookExecutor:
         self.calls: list[tuple[HookEvent, dict]] = []
 
     async def execute(self, event: HookEvent, payload: dict):
-        from openharness.hooks.types import AggregatedHookResult
+        from agentschool.hooks.types import AggregatedHookResult
 
         self.calls.append((event, dict(payload)))
         return AggregatedHookResult(results=[])
@@ -776,7 +776,7 @@ async def test_notification_hook_fires_on_permission_prompt(tmp_path: Path, monk
 @pytest.mark.asyncio
 async def test_subagent_stop_hook_fires_when_spawned_agent_finishes(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("CLAUDE_CODE_COORDINATOR_MODE", raising=False)
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     recorder = _RecordingHookExecutor()
     engine = QueryEngine(
         api_client=FakeApiClient(
@@ -1126,6 +1126,40 @@ class _LargeOutputTool(BaseTool):
         return ToolResult(output="snapshot-line\n" * 40)
 
 
+class _MetadataTool(BaseTool):
+    name = "metadata_tool"
+    description = "Returns structured metadata."
+    input_model = _OkInput
+
+    def is_read_only(self, arguments: BaseModel) -> bool:
+        return True
+
+    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
+        del arguments, context
+        return ToolResult(output="ok", metadata={"session_flag": True, "session_count": 3})
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_call_merges_result_metadata_into_query_context(tmp_path: Path):
+    registry = ToolRegistry()
+    registry.register(_MetadataTool())
+    context = _tool_context(tmp_path, registry, PermissionSettings(mode=PermissionMode.DEFAULT))
+    context.tool_metadata = {"existing": "value"}
+
+    result = await _execute_tool_call(
+        context,
+        "metadata_tool",
+        "toolu_meta",
+        {},
+    )
+
+    assert result.is_error is False
+    assert result.content == "ok"
+    assert context.tool_metadata["existing"] == "value"
+    assert context.tool_metadata["session_flag"] is True
+    assert context.tool_metadata["session_count"] == 3
+
+
 @pytest.mark.asyncio
 async def test_query_engine_synthesizes_tool_result_when_parallel_tool_raises(tmp_path: Path):
     """Parallel tool calls must each yield a tool_result even when one tool raises.
@@ -1194,9 +1228,9 @@ async def test_query_engine_synthesizes_tool_result_when_parallel_tool_raises(tm
 
 @pytest.mark.asyncio
 async def test_query_engine_offloads_large_tool_result_outputs(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("OPENHARNESS_TOOL_OUTPUT_INLINE_CHARS", "256")
-    monkeypatch.setenv("OPENHARNESS_TOOL_OUTPUT_PREVIEW_CHARS", "128")
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_TOOL_OUTPUT_INLINE_CHARS", "256")
+    monkeypatch.setenv("AGENTSCHOOL_TOOL_OUTPUT_PREVIEW_CHARS", "128")
     registry = ToolRegistry()
     registry.register(_LargeOutputTool())
 

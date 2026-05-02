@@ -12,21 +12,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from openharness.commands.registry import CommandContext, create_default_command_registry
-from openharness.config.settings import Settings, load_settings
-from openharness.engine.messages import ConversationMessage, TextBlock
-from openharness.engine.query_engine import QueryEngine
-from openharness.mcp.client import McpClientManager
-from openharness.mcp.config import load_mcp_server_configs
-from openharness.mcp.types import McpStdioServerConfig
-from openharness.permissions import PermissionChecker
-from openharness.plugins import load_plugins
-from openharness.plugins.installer import install_plugin_from_path, uninstall_plugin
-from openharness.state import AppState, AppStateStore
-from openharness.bridge import build_sdk_url, decode_work_secret, encode_work_secret, spawn_session
-from openharness.bridge.types import WorkSecret
-from openharness.tools import create_default_tool_registry
-from openharness.tools.base import ToolExecutionContext
+from agentschool.commands.registry import CommandContext, create_default_command_registry
+from agentschool.config.settings import Settings, load_settings
+from agentschool.engine.messages import ConversationMessage, TextBlock
+from agentschool.engine.query_engine import QueryEngine
+from agentschool.mcp.client import McpClientManager
+from agentschool.mcp.config import load_mcp_server_configs
+from agentschool.mcp.types import McpStdioServerConfig
+from agentschool.permissions import PermissionChecker
+from agentschool.plugins import load_plugins
+from agentschool.plugins.installer import install_plugin_from_path, uninstall_plugin
+from agentschool.state import AppState, AppStateStore
+from agentschool.bridge import build_sdk_url, decode_work_secret, encode_work_secret, spawn_session
+from agentschool.bridge.types import WorkSecret
+from agentschool.tools import create_default_tool_registry
+from agentschool.tools.base import ToolExecutionContext
 
 
 FIXTURE_SERVER = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "fake_mcp_server.py"
@@ -187,7 +187,6 @@ async def _run_command_flow(temp_root: Path) -> None:
         "/memory add Notes :: local command note",
         "/output-style set minimal",
         "/vim on",
-        "/voice on",
         "/plan on",
         "/effort high",
         "/passes 2",
@@ -220,14 +219,14 @@ async def _run_command_flow(temp_root: Path) -> None:
 
 
 async def main() -> int:
-    with tempfile.TemporaryDirectory(prefix="openharness-local-system-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="agentschool-local-system-") as temp_dir:
         temp_root = Path(temp_dir)
         previous = {
-            "OPENHARNESS_CONFIG_DIR": os.environ.get("OPENHARNESS_CONFIG_DIR"),
-            "OPENHARNESS_DATA_DIR": os.environ.get("OPENHARNESS_DATA_DIR"),
+            "AGENTSCHOOL_CONFIG_DIR": os.environ.get("AGENTSCHOOL_CONFIG_DIR"),
+            "AGENTSCHOOL_DATA_DIR": os.environ.get("AGENTSCHOOL_DATA_DIR"),
         }
-        os.environ["OPENHARNESS_CONFIG_DIR"] = str(temp_root / "config")
-        os.environ["OPENHARNESS_DATA_DIR"] = str(temp_root / "data")
+        os.environ["AGENTSCHOOL_CONFIG_DIR"] = str(temp_root / "config")
+        os.environ["AGENTSCHOOL_DATA_DIR"] = str(temp_root / "data")
         try:
             await _run_mcp_flow(temp_root)
             await _run_plugin_flow(temp_root)

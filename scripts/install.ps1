@@ -1,10 +1,9 @@
-# OpenHarness Windows Installer (PowerShell)
-# Usage: iex (Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/HKUDS/OpenHarness/main/scripts/install.ps1')
+# AgentSchool Windows Installer (PowerShell)
+# Usage: iex (Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/HKUDS/AgentSchool/main/scripts/install.ps1')
 #        or: powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 
 param(
     [switch]$FromSource,
-    [switch]$WithChannels,
     [switch]$Help
 )
 
@@ -22,7 +21,7 @@ function Write-Step { Write-Host ""; Write-Host "==>$args" -ForegroundColor Blue
 # ---------------------------------------------------------------------------
 Write-Host ""
 Write-Host "  ==============================" -ForegroundColor Cyan
-Write-Host "    OpenHarness Installer" -ForegroundColor Cyan
+Write-Host "    AgentSchool Installer" -ForegroundColor Cyan
 Write-Host "    Windows Native Setup" -ForegroundColor Cyan
 Write-Host "  ==============================" -ForegroundColor Cyan
 Write-Host ""
@@ -31,15 +30,10 @@ Write-Host ""
 # Parse arguments
 # ---------------------------------------------------------------------------
 if ($Help) {
-    Write-Host "Usage: .\install.ps1 [-FromSource] [-WithChannels]"
+    Write-Host "Usage: .\install.ps1 [-FromSource]"
     Write-Host ""
     Write-Host "  -FromSource    Clone from GitHub and install in editable mode"
-    Write-Host "  -WithChannels  Deprecated compatibility flag (dependencies installed by default)"
     exit 0
-}
-
-if ($WithChannels) {
-    Write-Warn "-WithChannels is no longer required; common IM channel dependencies are installed by default."
 }
 
 # ---------------------------------------------------------------------------
@@ -96,39 +90,13 @@ $PyVersion = & $PythonCmd --version 2>&1
 Write-Success "Found $PyVersion ($PythonCmd)"
 
 # ---------------------------------------------------------------------------
-# Step 3: Check Node.js >= 18 (optional)
+# Step 3: Install AgentSchool
 # ---------------------------------------------------------------------------
-Write-Step "Checking Node.js version (>= 18 required for React TUI)"
+Write-Step "Installing AgentSchool"
 
-$NodeOk = $false
-$NodePath = Get-Command node -ErrorAction SilentlyContinue
-if ($NodePath) {
-    $NodeVersionOutput = & node --version 2>&1
-    $NodeVersionMatch = $NodeVersionOutput -match "v(\d+)"
-    if ($NodeVersionMatch) {
-        $NodeMajor = [int]$matches[1]
-        if ($NodeMajor -ge 18) {
-            $NodeOk = $true
-            Write-Success "Found Node.js $NodeVersionOutput"
-        } else {
-            Write-Warn "Node.js $NodeVersionOutput is too old (need >= 18). React TUI will be skipped."
-        }
-    }
-} else {
-    Write-Warn "Node.js not found. React TUI will be skipped."
-    Write-Host "  To enable the React terminal UI, install Node.js 18+:"
-    Write-Host "    Download from: https://nodejs.org/"
-    Write-Host "    Or use winget: winget install OpenJS.NodeJS.LTS"
-}
-
-# ---------------------------------------------------------------------------
-# Step 4: Install OpenHarness
-# ---------------------------------------------------------------------------
-Write-Step "Installing OpenHarness"
-
-$RepoUrl = "https://github.com/HKUDS/OpenHarness.git"
-$InstallDir = "$env:USERPROFILE\.openharness-src"
-$VenvDir = "$env:USERPROFILE\.openharness-venv"
+$RepoUrl = "https://github.com/HKUDS/AgentSchool.git"
+$InstallDir = "$env:USERPROFILE\.agentschool-src"
+$VenvDir = "$env:USERPROFILE\.agentschool-venv"
 
 # Create virtual environment
 if (Test-Path $VenvDir) {
@@ -154,7 +122,7 @@ Write-Info "Activating virtual environment..."
 
 Write-Success "Virtual environment ready: $VenvDir"
 
-# Install OpenHarness
+# Install AgentSchool
 if ($FromSource) {
     Write-Info "Mode: -FromSource (git clone + pip install -e .)"
     
@@ -173,7 +141,7 @@ if ($FromSource) {
         git pull --ff-only
         Pop-Location
     } else {
-        Write-Info "Cloning OpenHarness into $InstallDir..."
+        Write-Info "Cloning AgentSchool into $InstallDir..."
         git clone $RepoUrl $InstallDir
         if (-not (Test-Path $InstallDir)) {
             Write-Error "Failed to clone repository"
@@ -184,48 +152,18 @@ if ($FromSource) {
     Write-Info "Installing in editable mode (pip install -e .)..."
     pip install -e $InstallDir --quiet
 } else {
-    Write-Info "Mode: pip install openharness-ai"
-    pip install openharness-ai --quiet --upgrade
+    Write-Info "Mode: pip install agentschool-ai"
+    pip install agentschool-ai --quiet --upgrade
 }
 
-Write-Success "OpenHarness package installed"
+Write-Success "AgentSchool package installed"
 
 # ---------------------------------------------------------------------------
-# Step 5: Install frontend/terminal npm dependencies
+# Step 4: Create AgentSchool config directory
 # ---------------------------------------------------------------------------
-if ($NodeOk) {
-    if ($FromSource) {
-        $FrontendDir = "$InstallDir\frontend\terminal"
-    } else {
-        # Find installed package location
-        $PackageInfo = pip show openharness-ai 2>&1
-        $LocationMatch = $PackageInfo -match "Location: (.+)"
-        if ($LocationMatch) {
-            $PackageLocation = $matches[1].Trim()
-            $FrontendDir = "$PackageLocation\openharness\_frontend"
-        } else {
-            $FrontendDir = $null
-        }
-    }
-    
-    if ($FrontendDir -and (Test-Path "$FrontendDir\package.json")) {
-        Write-Step "Installing React TUI dependencies"
-        Write-Info "Running npm install in $FrontendDir..."
-        Push-Location $FrontendDir
-        npm install --no-fund --no-audit --silent 2>&1 | Out-Null
-        Pop-Location
-        Write-Success "React TUI dependencies installed"
-    } else {
-        Write-Info "No frontend/terminal directory found - skipping npm install"
-    }
-}
+Write-Step "Setting up AgentSchool config directory"
 
-# ---------------------------------------------------------------------------
-# Step 6: Create OpenHarness config directory
-# ---------------------------------------------------------------------------
-Write-Step "Setting up OpenHarness config directory"
-
-$ConfigDir = "$env:USERPROFILE\.openharness"
+$ConfigDir = "$env:USERPROFILE\.agentschool"
 $SkillsDir = "$ConfigDir\skills"
 $PluginsDir = "$ConfigDir\plugins"
 
@@ -233,10 +171,10 @@ New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
 New-Item -ItemType Directory -Force -Path $SkillsDir | Out-Null
 New-Item -ItemType Directory -Force -Path $PluginsDir | Out-Null
 
-Write-Success "Config directory ready: ~/.openharness/"
+Write-Success "Config directory ready: ~/.agentschool/"
 
 # ---------------------------------------------------------------------------
-# Step 7: Add to PATH (Windows environment variable)
+# Step 5: Add to PATH (Windows environment variable)
 # ---------------------------------------------------------------------------
 Write-Step "Setting up PATH integration"
 
@@ -254,53 +192,26 @@ if ($CurrentPath -like "*$VenvBinDir*") {
 }
 
 # ---------------------------------------------------------------------------
-# Step 8: Verify installation
+# Step 6: Verify installation
 # ---------------------------------------------------------------------------
 Write-Step "Verifying installation"
 
-$OhPath = "$VenvBinDir\oh.exe"
-$OpenhPath = "$VenvBinDir\openh.exe"
-$OpenharnessPath = "$VenvBinDir\openharness.exe"
-$OhmoPath = "$VenvBinDir\ohmo.exe"
+$AgentSchoolPath = "$VenvBinDir\agentschool.exe"
 
-# Pick the best available launcher. The 'openh' alias was added after v0.1.6,
-# so PyPI installs of older releases won't have openh.exe. Prefer it when
-# present, otherwise fall back to 'openharness', then 'oh' (which collides
-# with PowerShell's Out-Host alias unless invoked as oh.exe).
-$Launcher = $null
-$LauncherExe = $null
-if (Test-Path $OpenhPath) {
-    $Launcher = "openh"
-    $LauncherExe = $OpenhPath
-} elseif (Test-Path $OpenharnessPath) {
-    $Launcher = "openharness"
-    $LauncherExe = $OpenharnessPath
-} elseif (Test-Path $OhPath) {
-    $Launcher = "oh"
-    $LauncherExe = $OhPath
-}
-
-if ($LauncherExe -and (Test-Path $OhmoPath)) {
-    $OhVersion = & $LauncherExe --version 2>&1
+if (Test-Path $AgentSchoolPath) {
+    $AgentSchoolVersion = & $AgentSchoolPath --version 2>&1
     Write-Success "Installation successful!"
     Write-Host ""
-    Write-Host "  $Launcher is ready: $OhVersion" -ForegroundColor Green
-    if ($Launcher -eq "oh") {
-        Write-Host "  Note: 'oh' collides with PowerShell's built-in Out-Host alias." -ForegroundColor Yellow
-        Write-Host "        Invoke it as 'oh.exe', or use 'openharness' instead." -ForegroundColor Yellow
-    } elseif (Test-Path $OhPath) {
-        Write-Host "  'oh' is also installed, but PowerShell may resolve it to Out-Host first." -ForegroundColor Yellow
-    }
-    Write-Host "  ohmo is ready" -ForegroundColor Green
+    Write-Host "  agentschool is ready: $AgentSchoolVersion" -ForegroundColor Green
 } else {
     # Try module execution
-    $ModuleVersion = python -m openharness --version 2>&1
+    $ModuleVersion = python -m agentschool --version 2>&1
     if ($ModuleVersion) {
-        Write-Warn "Launcher commands not yet available on PATH. Run via: python -m openharness"
+        Write-Warn "Launcher commands not yet available on PATH. Run via: python -m agentschool"
         Write-Host "  Version: $ModuleVersion"
     } else {
         Write-Warn "Could not verify launcher commands. The package may need a PATH update."
-        Write-Host "  Try: python -m openharness --version"
+        Write-Host "  Try: python -m agentschool --version"
     }
 }
 
@@ -308,22 +219,12 @@ if ($LauncherExe -and (Test-Path $OhmoPath)) {
 # Done
 # ---------------------------------------------------------------------------
 Write-Host ""
-Write-Host "OpenHarness is installed!" -ForegroundColor Green -BackgroundColor White
+Write-Host "AgentSchool is installed!" -ForegroundColor Green -BackgroundColor White
 Write-Host ""
 Write-Host "  Next steps:"
 Write-Host "    1. Restart terminal, or run: refreshenv (if using Chocolatey)"
 Write-Host "       Or manually refresh: `$env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','User')"
 Write-Host "    2. Set your API key:        `$env:ANTHROPIC_API_KEY = 'your_key'"
-if ($Launcher -eq "openharness") {
-    Write-Host "    3. Launch (PowerShell):     openharness"
-    Write-Host "       ('openh' is not available on this release; 'oh' collides with PowerShell's Out-Host alias.)"
-} elseif ($Launcher -eq "oh") {
-    Write-Host "    3. Launch (PowerShell):     oh.exe"
-    Write-Host "       ('oh' alone collides with PowerShell's Out-Host alias — use 'oh.exe' or 'openharness'.)"
-} else {
-    Write-Host "    3. Launch (PowerShell):     openh"
-    Write-Host "       Note: 'oh' may collide with the built-in Out-Host alias in PowerShell."
-}
-Write-Host "    4. Launch ohmo:             ohmo"
-Write-Host "    5. Docs:                    https://github.com/HKUDS/OpenHarness"
+Write-Host "    3. Launch (PowerShell):     agentschool"
+Write-Host "    4. Docs:                    https://github.com/HKUDS/AgentSchool"
 Write-Host ""

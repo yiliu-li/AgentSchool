@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from openharness.engine.messages import (
+from agentschool.engine.messages import (
     ConversationMessage,
     TextBlock,
     ToolResultBlock,

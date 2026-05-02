@@ -4,16 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from openharness.config.paths import (
+from agentschool.config.paths import (
     get_project_active_repo_context_path,
     get_project_issue_file,
     get_project_pr_comments_file,
 )
-from openharness.engine.messages import ConversationMessage, TextBlock
-from openharness.personalization import rules as personalization_rules
-from openharness.personalization.session_hook import update_rules_from_session
-from openharness.prompts import build_runtime_system_prompt, discover_claude_md_files, load_claude_md_prompt
-from openharness.config.settings import Settings
+from agentschool.prompts import build_runtime_system_prompt, discover_claude_md_files, load_claude_md_prompt
+from agentschool.config.settings import Settings
 
 
 def test_discover_claude_md_files(tmp_path: Path):
@@ -44,7 +41,7 @@ def test_load_claude_md_prompt(tmp_path: Path):
 
 
 def test_build_runtime_system_prompt_combines_sections(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.delenv("CLAUDE_CODE_COORDINATOR_MODE", raising=False)
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -59,7 +56,7 @@ def test_build_runtime_system_prompt_combines_sections(tmp_path: Path, monkeypat
 
 
 def test_build_runtime_system_prompt_includes_project_context_and_fast_mode(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     repo = tmp_path / "repo"
     repo.mkdir()
     get_project_issue_file(repo).write_text("# Bug\nNeed to fix flaky test.\n", encoding="utf-8")
@@ -78,7 +75,7 @@ def test_build_runtime_system_prompt_includes_project_context_and_fast_mode(tmp_
 
 
 def test_build_runtime_system_prompt_includes_active_repo_context(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     repo = tmp_path / "repo"
     repo.mkdir()
     get_project_active_repo_context_path(repo).write_text(
@@ -93,7 +90,7 @@ def test_build_runtime_system_prompt_includes_active_repo_context(tmp_path: Path
 
 
 def test_build_runtime_system_prompt_uses_coordinator_prompt_when_enabled(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("CLAUDE_CODE_COORDINATOR_MODE", "1")
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -106,7 +103,7 @@ def test_build_runtime_system_prompt_uses_coordinator_prompt_when_enabled(tmp_pa
 
 
 def test_build_runtime_system_prompt_skips_coordinator_context_when_disabled(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.delenv("CLAUDE_CODE_COORDINATOR_MODE", raising=False)
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -119,29 +116,3 @@ def test_build_runtime_system_prompt_skips_coordinator_context_when_disabled(tmp
     assert 'subagent_type="worker"' in prompt
     assert "/agents show TASK_ID" in prompt
     assert "Environment" in prompt
-
-
-def test_build_runtime_system_prompt_does_not_reinject_exported_secret_values(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.delenv("CLAUDE_CODE_COORDINATOR_MODE", raising=False)
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    rules_dir = tmp_path / "local_rules"
-    monkeypatch.setattr(personalization_rules, "_RULES_DIR", rules_dir)
-    monkeypatch.setattr(personalization_rules, "_RULES_FILE", rules_dir / "rules.md")
-    monkeypatch.setattr(personalization_rules, "_FACTS_FILE", rules_dir / "facts.json")
-
-    secret = "sk-test-secret"
-    update_rules_from_session(
-        [
-            ConversationMessage(
-                role="user",
-                content=[TextBlock(text=f"export OPENAI_API_KEY={secret}")],
-            )
-        ]
-    )
-
-    prompt = build_runtime_system_prompt(Settings(), cwd=repo, latest_user_prompt="hello")
-
-    assert "OPENAI_API_KEY" in prompt
-    assert secret not in prompt

@@ -9,11 +9,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from openharness.mcp.client import McpClientManager, McpServerNotConnectedError
-from openharness.mcp.types import McpConnectionStatus, McpStdioServerConfig, McpToolInfo
-from openharness.tools.base import ToolExecutionContext
-from openharness.tools.mcp_tool import McpToolAdapter
-from openharness.tools.read_mcp_resource_tool import ReadMcpResourceTool
+from agentschool.mcp.client import McpClientManager, McpServerNotConnectedError
+from agentschool.mcp.types import McpConnectionStatus, McpStdioServerConfig, McpToolInfo
+from agentschool.tools.base import ToolExecutionContext
+from agentschool.tools.mcp_tool import McpToolAdapter
+from agentschool.tools.read_mcp_resource_tool import ReadMcpResourceTool
 
 
 # --- McpClientManager.call_tool ---

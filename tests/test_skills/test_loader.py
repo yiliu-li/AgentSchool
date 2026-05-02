@@ -5,12 +5,12 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-from openharness.skills import get_user_skills_dir, load_skill_registry
-from openharness.skills.loader import _parse_skill_markdown as parse_skill_markdown
+from agentschool.skills import get_user_skills_dir, load_skill_registry
+from agentschool.skills.loader import _parse_skill_markdown as parse_skill_markdown
 
 
 def test_load_skill_registry_includes_bundled(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     registry = load_skill_registry()
 
     names = [skill.name for skill in registry.list_skills()]
@@ -19,7 +19,7 @@ def test_load_skill_registry_includes_bundled(tmp_path: Path, monkeypatch):
 
 
 def test_load_skill_registry_includes_user_skills(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENTSCHOOL_CONFIG_DIR", str(tmp_path / "config"))
     skills_dir = get_user_skills_dir()
     deploy_dir = skills_dir / "deploy"
     deploy_dir.mkdir(parents=True)

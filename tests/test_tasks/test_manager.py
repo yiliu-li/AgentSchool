@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from openharness.tasks.manager import BackgroundTaskManager, _encode_task_worker_payload
+from agentschool.tasks.manager import BackgroundTaskManager, _encode_task_worker_payload
 
 
 @pytest.mark.asyncio
 async def test_create_shell_task_and_read_output(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     manager = BackgroundTaskManager()
 
     task = await manager.create_shell_task(
@@ -31,7 +31,7 @@ async def test_create_shell_task_and_read_output(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_create_agent_task_with_command_override_and_write(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     manager = BackgroundTaskManager()
 
     task = await manager.create_agent_task(
@@ -47,7 +47,7 @@ async def test_create_agent_task_with_command_override_and_write(tmp_path: Path,
 
 @pytest.mark.asyncio
 async def test_create_agent_task_preserves_multiline_prompt(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     manager = BackgroundTaskManager()
 
     task = await manager.create_agent_task(
@@ -66,7 +66,7 @@ async def test_create_agent_task_preserves_multiline_prompt(tmp_path: Path, monk
 
 @pytest.mark.asyncio
 async def test_write_to_stopped_agent_task_restarts_process(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     manager = BackgroundTaskManager()
 
     task = await manager.create_agent_task(
@@ -82,7 +82,7 @@ async def test_write_to_stopped_agent_task_restarts_process(tmp_path: Path, monk
 
     output = manager.read_task_output(task.id)
     assert "got:ready" in output
-    assert "[OpenHarness] Agent task restarted; prior interactive context was not preserved." in output
+    assert "[AgentSchool] Agent task restarted; prior interactive context was not preserved." in output
     assert "got:follow-up" in output
     updated = manager.get_task(task.id)
     assert updated is not None
@@ -103,7 +103,7 @@ def test_encode_task_worker_payload_preserves_structured_messages() -> None:
 
 @pytest.mark.asyncio
 async def test_stop_task(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     manager = BackgroundTaskManager()
 
     task = await manager.create_shell_task(
@@ -119,7 +119,7 @@ async def test_stop_task(tmp_path: Path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_completion_listener_fires_when_task_finishes(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("OPENHARNESS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENTSCHOOL_DATA_DIR", str(tmp_path / "data"))
     manager = BackgroundTaskManager()
     seen: list[tuple[str, str, int | None]] = []
     done = asyncio.Event()

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# OpenHarness one-click installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/HKUDS/OpenHarness/main/scripts/install.sh | bash
-#        bash scripts/install.sh [--from-source] [--with-channels]
+# AgentSchool one-click installer
+# Usage: curl -fsSL https://raw.githubusercontent.com/HKUDS/AgentSchool/main/scripts/install.sh | bash
+#        bash scripts/install.sh [--from-source]
 
 set -euo pipefail
 
@@ -30,18 +30,14 @@ step()    { echo -e "\n${BOLD}${BLUE}==>${RESET}${BOLD} $*${RESET}"; }
 # Parse arguments
 # ---------------------------------------------------------------------------
 FROM_SOURCE=false
-WITH_CHANNELS=false
 
 for arg in "$@"; do
     case "$arg" in
         --from-source)  FROM_SOURCE=true ;;
-        --with-channels) WITH_CHANNELS=true ;;
         --help|-h)
-            echo "Usage: $0 [--from-source] [--with-channels]"
+            echo "Usage: $0 [--from-source]"
             echo ""
             echo "  --from-source    Clone from GitHub and install in editable mode"
-            echo "  --with-channels  Deprecated compatibility flag."
-            echo "                   Common IM channel dependencies are installed by default."
             exit 0
             ;;
         *)
@@ -57,8 +53,8 @@ done
 echo ""
 echo -e "${BOLD}${CYAN}  ██████╗ ██╗  ██╗${RESET}"
 echo -e "${BOLD}${CYAN} ██╔═══██╗██║  ██║${RESET}"
-echo -e "${BOLD}${CYAN} ██║   ██║███████║${RESET}   OpenHarness Installer"
-echo -e "${BOLD}${CYAN} ██║   ██║██╔══██║${RESET}   Open Agent Harness"
+echo -e "${BOLD}${CYAN} ██║   ██║███████║${RESET}   AgentSchool Installer"
+echo -e "${BOLD}${CYAN} ██║   ██║██╔══██║${RESET}   Headless Agent Runtime"
 echo -e "${BOLD}${CYAN} ╚██████╔╝██║  ██║${RESET}"
 echo -e "${BOLD}${CYAN}  ╚═════╝ ╚═╝  ╚═╝${RESET}"
 echo ""
@@ -148,44 +144,13 @@ if [ -z "$PIP_CMD" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Step 3: Check Node.js >= 18
+# Step 3: Install AgentSchool
 # ---------------------------------------------------------------------------
-step "Checking Node.js version (>= 18 required for React TUI)"
+step "Installing AgentSchool"
 
-NODE_OK=false
-if command -v node &>/dev/null; then
-    NODE_VER=$(node --version 2>&1 | grep -oE '[0-9]+' | head -1)
-    if [ "${NODE_VER}" -ge 18 ] 2>/dev/null; then
-        NODE_OK=true
-        success "Found Node.js $(node --version)"
-    else
-        warn "Node.js $(node --version) is too old (need >= 18). React TUI will be skipped."
-    fi
-else
-    warn "Node.js not found. React TUI will be skipped."
-    echo "  To enable the React terminal UI, install Node.js 18+:"
-    case "$OS_TYPE" in
-        macOS)
-            echo "    brew install node"
-            ;;
-        Linux|WSL)
-            echo "    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -"
-            echo "    sudo apt install -y nodejs"
-            ;;
-        *)
-            echo "    Download from: https://nodejs.org/"
-            ;;
-    esac
-fi
-
-# ---------------------------------------------------------------------------
-# Step 4: Install OpenHarness
-# ---------------------------------------------------------------------------
-step "Installing OpenHarness"
-
-REPO_URL="https://github.com/HKUDS/OpenHarness.git"
-INSTALL_DIR="$HOME/.openharness-src"
-VENV_DIR="$HOME/.openharness-venv"
+REPO_URL="https://github.com/HKUDS/AgentSchool.git"
+INSTALL_DIR="$HOME/.agentschool-src"
+VENV_DIR="$HOME/.agentschool-venv"
 BIN_DIR="$HOME/.local/bin"
 
 # ---------------------------------------------------------------------------
@@ -215,7 +180,7 @@ if [ "$FROM_SOURCE" = true ]; then
             info "Source directory exists, pulling latest changes..."
             git -C "$INSTALL_DIR" pull --ff-only
         else
-            info "Cloning OpenHarness into ${INSTALL_DIR}..."
+            info "Cloning AgentSchool into ${INSTALL_DIR}..."
             git clone "$REPO_URL" "$INSTALL_DIR"
         fi
     else
@@ -231,96 +196,63 @@ if [ "$FROM_SOURCE" = true ]; then
     info "Installing in editable mode (pip install -e .)..."
     $PIP_CMD install -e "$INSTALL_DIR" --quiet
 else
-    info "Mode: pip install openharness-ai"
-    $PIP_CMD install openharness-ai --quiet --upgrade
+    info "Mode: pip install agentschool-ai"
+    $PIP_CMD install agentschool-ai --quiet --upgrade
 fi
 
-success "OpenHarness package installed"
+success "AgentSchool package installed"
 
 # ---------------------------------------------------------------------------
-# Step 5: Channel dependencies
+# Step 4: Create AgentSchool config directory
 # ---------------------------------------------------------------------------
-if [ "$WITH_CHANNELS" = true ]; then
-    step "Channel dependencies"
-    info "--with-channels is no longer required; common IM channel dependencies are installed by default."
-fi
+step "Setting up AgentSchool config directory"
+
+mkdir -p "$HOME/.agentschool"
+mkdir -p "$HOME/.agentschool/skills"
+mkdir -p "$HOME/.agentschool/plugins"
+
+success "Config directory ready: ~/.agentschool/"
 
 # ---------------------------------------------------------------------------
-# Step 6: Install frontend/terminal npm dependencies
-# ---------------------------------------------------------------------------
-if [ "$NODE_OK" = true ]; then
-    # Determine the frontend/terminal path
-    if [ "$FROM_SOURCE" = true ]; then
-        FRONTEND_DIR="$INSTALL_DIR/frontend/terminal"
-    else
-        FRONTEND_DIR="$(pwd)/frontend/terminal"
-    fi
-
-    if [ -d "$FRONTEND_DIR" ] && [ -f "$FRONTEND_DIR/package.json" ]; then
-        step "Installing React TUI dependencies"
-        info "Running npm install in ${FRONTEND_DIR}..."
-        (cd "$FRONTEND_DIR" && npm install --no-fund --no-audit --silent)
-        success "React TUI dependencies installed"
-    else
-        info "No frontend/terminal directory found — skipping npm install"
-    fi
-fi
-
-# ---------------------------------------------------------------------------
-# Step 7: Create OpenHarness config directory
-# ---------------------------------------------------------------------------
-step "Setting up OpenHarness config directory"
-
-mkdir -p "$HOME/.openharness"
-mkdir -p "$HOME/.openharness/skills"
-mkdir -p "$HOME/.openharness/plugins"
-
-success "Config directory ready: ~/.openharness/"
-
-# ---------------------------------------------------------------------------
-# Step 8: Register global commands
+# Step 5: Register global commands
 # ---------------------------------------------------------------------------
 step "Registering global commands"
 
 mkdir -p "$BIN_DIR"
-ln -snf "$VENV_DIR/bin/oh" "$BIN_DIR/oh"
-ln -snf "$VENV_DIR/bin/ohmo" "$BIN_DIR/ohmo"
-ln -snf "$VENV_DIR/bin/openharness" "$BIN_DIR/openharness"
-success "Linked oh/ohmo into ${BIN_DIR}"
+ln -snf "$VENV_DIR/bin/agentschool" "$BIN_DIR/agentschool"
+success "Linked agentschool into ${BIN_DIR}"
 
 # ---------------------------------------------------------------------------
-# Step 9: Verify installation
+# Step 6: Verify installation
 # ---------------------------------------------------------------------------
 step "Verifying installation"
 
-if [ -x "$BIN_DIR/oh" ] && [ -x "$BIN_DIR/ohmo" ]; then
-    OH_VERSION=$("$BIN_DIR/oh" --version 2>&1 || echo "(version check failed)")
-    OHMO_VERSION=$("$BIN_DIR/ohmo" --help >/dev/null 2>&1 && echo "available" || echo "not available")
+if [ -x "$BIN_DIR/agentschool" ]; then
+    AGENTSCHOOL_VERSION=$("$BIN_DIR/agentschool" --version 2>&1 || echo "(version check failed)")
     success "Installation successful!"
     echo ""
-    echo -e "  ${BOLD}oh${RESET} is ready: ${GREEN}${OH_VERSION}${RESET}"
-    echo -e "  ${BOLD}ohmo${RESET} is ready: ${GREEN}${OHMO_VERSION}${RESET}"
-elif "$PYTHON_CMD" -m openharness --version &>/dev/null 2>&1; then
-    OH_VERSION=$("$PYTHON_CMD" -m openharness --version 2>&1)
-    warn "'oh'/'ohmo' command links are not executable yet. Run via: python -m openharness or python -m ohmo"
-    echo "  Version: ${OH_VERSION}"
-    echo "  To add them to PATH, ensure ${BIN_DIR} is in PATH:"
+    echo -e "  ${BOLD}agentschool${RESET} is ready: ${GREEN}${AGENTSCHOOL_VERSION}${RESET}"
+elif "$PYTHON_CMD" -m agentschool --version &>/dev/null 2>&1; then
+    AGENTSCHOOL_VERSION=$("$PYTHON_CMD" -m agentschool --version 2>&1)
+    warn "'agentschool' command link is not executable yet. Run via: python -m agentschool"
+    echo "  Version: ${AGENTSCHOOL_VERSION}"
+    echo "  To add it to PATH, ensure ${BIN_DIR} is in PATH:"
     echo "    export PATH=\"${BIN_DIR}:\$PATH\""
 else
-    warn "Could not verify 'oh'/'ohmo' commands. The package may need a PATH update."
-    echo "  Try: $PYTHON_CMD -m openharness --version"
+    warn "Could not verify the 'agentschool' command. The package may need a PATH update."
+    echo "  Try: $PYTHON_CMD -m agentschool --version"
     echo "  Or add ${BIN_DIR} to PATH and restart your shell."
 fi
 
 # ---------------------------------------------------------------------------
-# Step 10: Add command directory to shell profile
+# Step 7: Add command directory to shell profile
 # ---------------------------------------------------------------------------
 step "Setting up shell integration"
 
 ACTIVATION_LINE="export PATH=\"$BIN_DIR:\$PATH\""
 FISH_CONFIG="$HOME/.config/fish/config.fish"
 FISH_BLOCK=$(cat <<EOF
-# OpenHarness
+# AgentSchool
 if not contains -- "$BIN_DIR" \$PATH
     set -gx PATH "$BIN_DIR" \$PATH
 end
@@ -340,7 +272,7 @@ append_shell_path() {
         return
     fi
     echo "" >> "$rc_file"
-    echo "# OpenHarness" >> "$rc_file"
+    echo "# AgentSchool" >> "$rc_file"
     echo "$ACTIVATION_LINE" >> "$rc_file"
     success "Added $BIN_DIR to PATH in $(basename "$rc_file")"
     configured_any=true
@@ -370,16 +302,15 @@ fi
 # Done
 # ---------------------------------------------------------------------------
 echo ""
-echo -e "${BOLD}${GREEN}OpenHarness is installed!${RESET}"
+echo -e "${BOLD}${GREEN}AgentSchool is installed!${RESET}"
 echo ""
 echo "  Next steps:"
 echo "    1. Restart shell, or reload your shell config:"
 echo "         bash/zsh: source ~/.bashrc  (or ~/.zshrc)"
 echo "         fish:     source ~/.config/fish/config.fish"
-echo "    2. Set your API key:        export ANTHROPIC_API_KEY=your_key"
-echo "    3. Launch:                  oh"
-echo "    4. Launch ohmo:             ohmo"
-echo "    5. Docs:                    https://github.com/HKUDS/OpenHarness"
+echo "    2. Configure a provider:    agentschool setup"
+echo "    3. Launch a run:            agentschool -p 'Summarize this repository'"
+echo "    4. Docs:                    https://github.com/HKUDS/AgentSchool"
 echo ""
 echo "  Notes:"
 echo "    - Commands are linked into: ${BIN_DIR}"
