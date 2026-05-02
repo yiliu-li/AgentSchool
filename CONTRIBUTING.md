@@ -1,6 +1,6 @@
 # Contributing to AgentSchool
 
-AgentSchool is an open-source agent runtime focused on clarity, hackability, and reproducible coding workflows.
+AgentSchool is an open-source agent runtime based on OpenHarness, then refocused around clarity, hackability, and reproducible coding workflows.
 
 ## Ways to contribute
 

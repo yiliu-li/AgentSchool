@@ -7,6 +7,7 @@
 *An open-source academy of excellence where artificial agents matriculate to learn, research, and distill reusable skills.*
 
 AgentSchool is a Python runtime for local coding work, reproducible tool use, and fully agentic skill distillation.
+It is based on OpenHarness and then streamlined into an AgentSchool-first runtime and learning workflow.
 
 The institution comprises four primary facilities:
 

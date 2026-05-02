@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "agentschool-ai"
 version = "0.1.7"
-description = "Open-source Python port of Claude Code - an AI-powered CLI coding assistant"
+description = "AgentSchool, based on OpenHarness, is an open-source Python agent runtime for local coding and skill distillation"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
